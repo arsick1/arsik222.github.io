@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра "Монетка"</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .coin {
+            width: 150px;
+            height: 150px;
+            margin: 20px auto;
+            position: relative;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        
+        .coin.flipping {
+            animation: flip 1.5s ease-in-out;
+        }
+        
+        @keyframes flip {
+            0% { 
+                transform: rotateY(0deg) scale(1); 
+            }
+            25% { 
+                transform: rotateY(900deg) scale(1.1); 
+            }
+            50% { 
+                transform: rotateY(1800deg) scale(1); 
+            }
+            75% { 
+                transform: rotateY(2700deg) scale(1.1); 
+            }
+            100% { 
+                transform: rotateY(3600deg) scale(1); 
+            }
+        }
+        
+        .coin-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border: 5px solid #ffd700;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #8b6914;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tails {
+            transform: rotateY(180deg);
+            background: linear-gradient(45deg, #c0c0c0, #e8e8e8);
+            color: #666;
+            border-color: #c0c0c0;
+        }
+        
+        .coin.show-heads {
+            transform: rotateY(0deg);
+        }
+        
+        .coin.show-tails {
+            transform: rotateY(180deg);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .stats {
+            margin-top: 20px;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .result {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 15px 0;
+            min-height: 36px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .heads-count { color: #ffd700; }
+        .tails-count { color: #c0c0c0; }
+        
+        .probability {
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Бросаем монетку!</h1>
+        
+        <div class="coin show-heads" id="coin">
+            <div class="coin-face heads">ОРЁЛ</div>
+            <div class="coin-face tails">РЕШКА</div>
+        </div>
+        
+        <div class="result" id="result">Нажмите "Бросить монетку"!</div>
+        
+        <div class="controls">
+            <button onclick="flipCoin()">🎲 Бросить монетку</button>
+            <button onclick="resetStats()">🔄 Сбросить статистику</button>
+        </div>
+        
+        <div class="stats">
+            <p>Статистика бросков:</p>
+            <p>Орёл: <span class="heads-count" id="headsCount">0</span></p>
+            <p>Решка: <span class="tails-count" id="tailsCount">0</span></p>
+            <p>Всего бросков: <span id="totalCount">0</span></p>
+            <div class="probability" id="probability">Вероятность: Орёл 0% / Решка 0%</div>
+        </div>
+    </div>
+
+    <script>
+        let headsCount = 0;
+        let tailsCount = 0;
+        let totalCount = 0;
+        let isFlipping = false;
+
+        function flipCoin() {
+            if (isFlipping) return;
+            
+            isFlipping = true;
+            const coin = document.getElementById('coin');
+            const result = document.getElementById('result');
+            
+            // Убираем предыдущие классы
+            coin.classList.remove('flipping', 'show-heads', 'show-tails');
+            
+            // Небольшая задержка для сброса анимации
+            setTimeout(() => {
+                // Генерируем случайный результат
+                const isHeads = Math.random() > 0.5;
+                
+                // Добавляем класс анимации
+                coin.classList.add('flipping');
+                
+                // Ждем окончания анимации
+                setTimeout(() => {
+                    // Убираем анимацию и показываем финальный результат
+                    coin.classList.remove('flipping');
+                    
+                    if (isHeads) {
+                        headsCount++;
+                        coin.classList.add('show-heads');
+                        result.innerHTML = "🎉 Выпал ОРЁЛ!";
+                        result.style.color = "#ffd700";
+                    } else {
+                        tailsCount++;
+                        coin.classList.add('show-tails');
+                        result.innerHTML = "✨ Выпала РЕШКА!";
+                        result.style.color = "#c0c0c0";
+                    }
+                    
+                    totalCount++;
+                    updateStats();
+                    isFlipping = false;
+                }, 1500);
+            }, 10);
+        }
+
+        function updateStats() {
+            document.getElementById('headsCount').textContent = headsCount;
+            document.getElementById('tailsCount').textContent = tailsCount;
+            document.getElementById('totalCount').textContent = totalCount;
+            
+            // Обновляем вероятности
+            const headsProb = totalCount > 0 ? Math.round((headsCount / totalCount) * 100) : 0;
+            const tailsProb = totalCount > 0 ? Math.round((tailsCount / totalCount) * 100) : 0;
+            document.getElementById('probability').textContent = 
+                `Вероятность: Орёл ${headsProb}% / Решка ${tailsProb}%`;
+        }
+
+        function resetStats() {
+            headsCount = 0;
+            tailsCount = 0;
+            totalCount = 0;
+            updateStats();
+            document.getElementById('result').innerHTML = "Статистика сброшена!";
+            document.getElementById('result').style.color = "white";
+            
+            // Сбрасываем монетку к исходному состоянию
+            const coin = document.getElementById('coin');
+            coin.classList.remove('show-tails');
+            coin.classList.add('show-heads');
+        }
+
+        // Автоматический бросок при загрузке страницы
+        window.addEventListener('load', () => {
+            setTimeout(flipCoin, 1000);
+        });
+    </script>
+</body>
+</html>
